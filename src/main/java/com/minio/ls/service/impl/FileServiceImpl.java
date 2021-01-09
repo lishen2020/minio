@@ -1,13 +1,16 @@
 package com.minio.ls.service.impl;
 
+import com.minio.ls.config.MinioConfig;
 import com.minio.ls.handlers.MinioBucketHandler;
 import com.minio.ls.handlers.MinioObjectHandler;
 import com.minio.ls.pojo.CustomObjectWriteResponse;
 import com.minio.ls.service.FileService;
 import com.minio.ls.util.CodeGeneratorUtils;
 import com.minio.ls.util.StringUtils;
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.ObjectWriteResponse;
 import io.minio.errors.*;
+import io.minio.http.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * file service implement class
@@ -32,6 +36,66 @@ import java.util.List;
 public class FileServiceImpl implements FileService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FileServiceImpl.class);
+
+    /**
+     * Uploads data to minio
+     *
+     * @param multipartFile multipartFile
+     * @param key           object name
+     * @return {@link CustomObjectWriteResponse} return object info
+     * @author lishen
+     */
+    @Override
+    public String putObjectGetUrl(MultipartFile multipartFile, String key) {
+        if (multipartFile == null || multipartFile.isEmpty()) {
+            throw new NullPointerException("#### multipartFile is null or content is empty ####");
+        }
+        // bucket name
+        LocalDate localDate = LocalDate.now();
+        String bucketName = String.valueOf(localDate.getYear());
+        // folder
+        String month = String.valueOf(localDate.getMonthValue());
+        String day = String.valueOf(localDate.getDayOfMonth());
+        String folder = String.join(StringUtils.SLASH, month, day, StringUtils.EMPTY);
+        try {
+            // make bucket
+            MinioBucketHandler.makeBucket(bucketName);
+            // object name
+            String objectName;
+            String originalFilename = multipartFile.getOriginalFilename();
+            String expandedName = originalFilename.substring(originalFilename.lastIndexOf(StringUtils.DOT));
+            if (StringUtils.trimIsEmpty(key)) {
+                String code = CodeGeneratorUtils.code();
+                objectName = code.concat(expandedName);
+            } else {
+                objectName = key.concat(expandedName);
+            }
+            // put object
+            ObjectWriteResponse objectWriteResponse = MinioObjectHandler
+                    .putObject(bucketName, folder, objectName, multipartFile, null);
+//            return MinioConfig.getClientInstance().getObjectUrl(objectWriteResponse.bucket(), objectWriteResponse.object());
+            GetPresignedObjectUrlArgs getPresignedObjectUrlArgs = GetPresignedObjectUrlArgs.builder()
+                    .bucket(objectWriteResponse.bucket())
+                    .object(objectWriteResponse.object())
+                    .method(Method.GET)
+                    .expiry(365 * 100, TimeUnit.DAYS)
+                    .build();
+            return MinioConfig.getClientInstance().getPresignedObjectUrl(getPresignedObjectUrlArgs);
+        } catch (MinioException e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+        } catch (IOException e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+        }
+        return null;
+    }
 
     /**
      * Uploads data to minio

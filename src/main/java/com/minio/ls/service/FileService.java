@@ -22,6 +22,16 @@ public interface FileService {
      * @return {@link CustomObjectWriteResponse} return object info
      * @author lishen
      */
+    String putObjectGetUrl(MultipartFile multipartFile, String key);
+
+    /**
+     * Uploads data to minio
+     *
+     * @param multipartFile multipartFile
+     * @param key           object name
+     * @return {@link CustomObjectWriteResponse} return object info
+     * @author lishen
+     */
     CustomObjectWriteResponse putObject(MultipartFile multipartFile, String key);
 
     /**

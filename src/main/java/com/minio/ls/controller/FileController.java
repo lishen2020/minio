@@ -66,6 +66,24 @@ public class FileController {
      * @return {@link ResponseEntity}
      * @author lishen
      */
+    @PostMapping("/put/url")
+    public ResponseEntity putObjectGetUrl(@RequestParam("file") MultipartFile multipartFile,
+                                          @RequestParam("key") String key) {
+        if (multipartFile == null || multipartFile.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        String url = fileService.putObjectGetUrl(multipartFile, key);
+        return ResponseEntity.ok().body(url);
+    }
+
+    /**
+     * Uploads data to minio
+     *
+     * @param multipartFile multipartFile
+     * @param key           object name
+     * @return {@link ResponseEntity}
+     * @author lishen
+     */
     @PostMapping("/put")
     public ResponseEntity putObject(@RequestParam("file") MultipartFile multipartFile,
                                     @RequestParam("key") String key) {

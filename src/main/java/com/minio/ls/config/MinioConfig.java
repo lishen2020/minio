@@ -1,6 +1,8 @@
 package com.minio.ls.config;
 
 import io.minio.MinioClient;
+import io.minio.SetBucketPolicyArgs;
+import io.minio.errors.*;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
@@ -9,6 +11,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -53,7 +58,11 @@ public class MinioConfig {
      */
     public static MinioClient getClientInstance() {
         if (client == null) {
-            client = buildClient();
+            synchronized (MinioConfig.class) {
+                if (client == null) {
+                    client = buildClient();
+                }
+            }
         }
         LOGGER.error("#### get minio client instance ####");
         return client;
